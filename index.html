@@ -9,11 +9,15 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, onSnapshot, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, onSnapshot, doc, deleteDoc, updateDoc, setDoc, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- USER CONFIGURATION ---
         const firebaseConfig = {
@@ -45,6 +49,7 @@
         window.doc = doc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
+        window.writeBatch = writeBatch;
         
         // Auth Listener
         onAuthStateChanged(window.auth, (user) => {
@@ -314,9 +319,9 @@
 
         <!-- DESKTOP SLIDESHOW -->
         <div id="desktop-slideshow" class="absolute inset-0 w-full h-full hidden md:block z-0">
-            <div class="slide active bg-center" style="background-image: url('slides/bg2.png');"></div>
+            <div class="slide active bg-center" style="background-image: url('slides/bg1.png');"></div>
+            <div class="slide bg-center" style="background-image: url('slides/bg2.png');"></div>
             <div class="slide bg-center" style="background-image: url('slides/bg.png');"></div>
-            <div class="slide bg-center" style="background-image: url('slides/bg3.png');"></div>
         </div>
 
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 z-10 pointer-events-none"></div>
@@ -472,11 +477,16 @@
 
     <!-- MODALS -->
     
-    <!-- Product Modal -->
-    <div id="product-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md">
-        <div class="bg-mud-light w-full max-w-6xl h-auto md:h-[90vh] rounded-sm shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-[scaleIn_0.3s_ease-out] border-4 border-deep-maroon">
-            <button onclick="closeProductModal()" class="absolute top-4 right-6 text-deep-maroon bg-white/80 rounded-full w-10 h-10 z-50 hover:bg-deep-maroon hover:text-white transition flex items-center justify-center shadow-lg"><i class="fa-solid fa-times text-xl"></i></button>
-            <div id="modal-content" class="flex flex-col md:flex-row w-full h-full"></div>
+    <!-- Product Modal (UPDATED FOR MOBILE VIEW & SCROLLING) -->
+    <div id="product-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-2 md:p-8 bg-black/80 backdrop-blur-md">
+        <div class="bg-mud-light w-full max-w-6xl max-h-[95vh] md:max-h-[90vh] rounded-sm shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-[scaleIn_0.3s_ease-out] border-4 border-deep-maroon overflow-y-auto md:overflow-hidden">
+            
+            <!-- Improved Close Button -->
+            <button onclick="closeProductModal()" class="fixed top-4 right-4 md:absolute md:top-4 md:right-6 text-white bg-deep-maroon rounded-full w-10 h-10 z-[100] hover:bg-black transition flex items-center justify-center shadow-lg border-2 border-white">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+            
+            <div id="modal-content" class="flex flex-col md:flex-row w-full h-auto md:h-full"></div>
         </div>
     </div>
 
@@ -595,42 +605,145 @@
     </div>
 
     <!-- Admin Modal -->
-    <div id="admin-modal" class="fixed inset-0 z-[100] hidden flex bg-black/90">
-        <div class="w-64 bg-deep-maroon text-mud-light p-6 hidden md:flex flex-col">
-            <h2 class="font-heading text-2xl mb-8 text-antique-gold">Admin Panel</h2>
-            <nav class="space-y-2 flex-1">
-                <button onclick="showAdminTab('orders')" class="block w-full text-left px-4 py-3 hover:bg-white/10 rounded transition"><i class="fa-solid fa-list mr-2"></i> Orders</button>
-                <button onclick="showAdminTab('products')" class="block w-full text-left px-4 py-3 hover:bg-white/10 rounded transition"><i class="fa-solid fa-shirt mr-2"></i> Products</button>
-                <button onclick="showAdminTab('add-product')" class="block w-full text-left px-4 py-3 hover:bg-white/10 rounded transition"><i class="fa-solid fa-plus mr-2"></i> Add Item</button>
-                <button onclick="showAdminTab('subscribers')" class="block w-full text-left px-4 py-3 hover:bg-white/10 rounded transition"><i class="fa-solid fa-envelope mr-2"></i> Emails</button>
-            </nav>
-            <button onclick="closeAdminPanel()" class="text-left px-4 py-3 text-red-300 hover:text-white"><i class="fa-solid fa-sign-out-alt mr-2"></i> Exit</button>
+    <div id="admin-modal" class="fixed inset-0 z-[100] hidden flex flex-col md:flex-row bg-gray-100 font-sans">
+        <!-- Mobile Header for Admin -->
+        <div class="md:hidden bg-deep-maroon text-white p-4 flex justify-between items-center shadow-md shrink-0">
+            <h2 class="font-heading text-xl">Admin Panel</h2>
+            <button onclick="closeAdminPanel()"><i class="fa-solid fa-times text-xl"></i></button>
         </div>
-        <div class="flex-1 bg-gray-100 p-6 overflow-y-auto relative">
-            <button onclick="closeAdminPanel()" class="md:hidden absolute top-4 right-4 text-black"><i class="fa-solid fa-times text-2xl"></i></button>
-            <div id="admin-content" class="max-w-4xl mx-auto">
-                <div id="admin-orders" class="admin-tab"></div>
-                <div id="admin-products" class="admin-tab hidden"></div>
+    
+        <!-- Sidebar (Desktop) -->
+        <div class="w-full md:w-64 bg-deep-maroon text-mud-light flex flex-col shrink-0 md:h-full overflow-y-auto">
+            <div class="p-6 hidden md:block">
+                <h2 class="font-heading text-2xl text-antique-gold border-b border-white/20 pb-4">Royal Admin</h2>
+            </div>
+            <nav class="flex-1 px-2 space-y-1">
+                <button onclick="showAdminTab('dashboard')" class="admin-nav-btn w-full text-left px-4 py-3 rounded hover:bg-white/10 transition flex items-center gap-3"><i class="fa-solid fa-chart-line w-6"></i> Dashboard</button>
+                <button onclick="showAdminTab('orders')" class="admin-nav-btn w-full text-left px-4 py-3 rounded hover:bg-white/10 transition flex items-center gap-3"><i class="fa-solid fa-box-open w-6"></i> Orders</button>
+                <button onclick="showAdminTab('products')" class="admin-nav-btn w-full text-left px-4 py-3 rounded hover:bg-white/10 transition flex items-center gap-3"><i class="fa-solid fa-shirt w-6"></i> Inventory</button>
+                <button onclick="showAdminTab('add-product')" class="admin-nav-btn w-full text-left px-4 py-3 rounded hover:bg-white/10 transition flex items-center gap-3"><i class="fa-solid fa-plus-circle w-6"></i> Add/Edit Item</button>
+                <button onclick="showAdminTab('subscribers')" class="admin-nav-btn w-full text-left px-4 py-3 rounded hover:bg-white/10 transition flex items-center gap-3"><i class="fa-solid fa-users w-6"></i> Customers</button>
+            </nav>
+            <div class="p-4 border-t border-white/20">
+                <button onclick="closeAdminPanel()" class="w-full text-left px-4 py-2 text-red-300 hover:text-white transition flex items-center gap-3"><i class="fa-solid fa-sign-out-alt w-6"></i> Exit Panel</button>
+            </div>
+        </div>
+    
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-8 relative">
+            <button onclick="closeAdminPanel()" class="hidden md:block absolute top-4 right-4 text-gray-500 hover:text-red-600"><i class="fa-solid fa-times text-2xl"></i></button>
+            
+            <div id="admin-content" class="max-w-6xl mx-auto">
+                
+                <!-- DASHBOARD -->
+                <div id="admin-dashboard" class="admin-tab space-y-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Overview</h2>
+                        <button onclick="downloadAllOrders()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-file-export"></i> Export All Orders
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded shadow border-l-4 border-green-500">
+                            <h3 class="text-gray-500 text-sm font-bold uppercase">Total Revenue</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="dash-revenue">₹0</p>
+                        </div>
+                        <div class="bg-white p-6 rounded shadow border-l-4 border-blue-500">
+                            <h3 class="text-gray-500 text-sm font-bold uppercase">Total Orders</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="dash-orders">0</p>
+                        </div>
+                         <div class="bg-white p-6 rounded shadow border-l-4 border-purple-500">
+                            <h3 class="text-gray-500 text-sm font-bold uppercase">Total Products</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="dash-products">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ORDERS -->
+                <div id="admin-orders" class="admin-tab hidden">
+                     <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Order Management</h2>
+                        <button onclick="deleteAllOrders()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-trash"></i> Delete All Orders
+                        </button>
+                     </div>
+                     <div id="admin-orders-list" class="space-y-4"></div>
+                </div>
+
+                <!-- INVENTORY -->
+                <div id="admin-products" class="admin-tab hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Inventory</h2>
+                        <button onclick="showAdminTab('add-product')" class="bg-deep-maroon text-white px-4 py-2 rounded hover:bg-black text-sm">Add New</button>
+                    </div>
+                     <div id="admin-products-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <!-- ADD/EDIT PRODUCT -->
                 <div id="admin-add-product" class="admin-tab hidden">
-                     <h3 class="text-2xl font-bold text-deep-maroon mb-6">Add New Luxury Item</h3>
-                    <form onsubmit="adminAddProduct(event)" class="bg-white p-8 shadow-md rounded">
+                     <h2 id="form-title" class="text-3xl font-bold text-deep-maroon mb-6">Add New Luxury Item</h2>
+                    <form onsubmit="adminUpdateProduct(event)" class="bg-white p-8 shadow-md rounded" id="product-form">
+                         <!-- Hidden ID field for edits -->
+                        <input type="hidden" id="edit-product-id">
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <input type="text" name="name" placeholder="Product Name" required class="p-3 border border-gray-300 w-full rounded-sm">
-                            <input type="number" name="price" placeholder="Price (₹)" required class="p-3 border border-gray-300 w-full rounded-sm">
-                            <input type="text" name="category" placeholder="Category (e.g. Phulkari)" required class="p-3 border border-gray-300 w-full rounded-sm">
-                            <input type="text" name="fabric" placeholder="Fabric" class="p-3 border border-gray-300 w-full rounded-sm">
-                            <input type="text" name="origin" placeholder="Origin (e.g. Patiala)" class="p-3 border border-gray-300 w-full rounded-sm">
-                             <div class="col-span-1 md:col-span-2">
-                                <label class="block text-sm font-bold text-gray-700 mb-1">Image</label>
-                                <input type="file" id="image-file" accept="image/*" required class="w-full p-2 border border-gray-300 bg-gray-50">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Product Name</label>
+                                <input type="text" id="p-name" required class="p-3 border border-gray-300 w-full rounded focus:border-deep-maroon outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Price (₹)</label>
+                                <input type="number" id="p-price" required class="p-3 border border-gray-300 w-full rounded focus:border-deep-maroon outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Category</label>
+                                <input type="text" id="p-category" placeholder="e.g. Phulkari" required class="p-3 border border-gray-300 w-full rounded focus:border-deep-maroon outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Fabric</label>
+                                <input type="text" id="p-fabric" class="p-3 border border-gray-300 w-full rounded focus:border-deep-maroon outline-none">
+                            </div>
+                             <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Origin</label>
+                                <input type="text" id="p-origin" placeholder="e.g. Patiala" class="p-3 border border-gray-300 w-full rounded focus:border-deep-maroon outline-none">
+                            </div>
+                             <div class="col-span-1 md:col-span-2 space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">Image (Upload New to Replace)</label>
+                                <input type="file" id="image-file" accept="image/*" class="w-full p-2 border border-gray-300 bg-gray-50">
+                                <input type="hidden" id="current-image-url"> <!-- Store old URL here -->
                             </div>
                         </div>
-                        <textarea name="desc" placeholder="Short Luxury Description" required class="w-full p-3 border border-gray-300 mt-6 h-24 rounded-sm"></textarea>
-                        <textarea name="details" placeholder="Full Details" class="w-full p-3 border border-gray-300 mt-4 h-32 rounded-sm"></textarea>
-                        <button type="submit" id="add-btn" class="mt-6 bg-deep-maroon text-white px-8 py-3 rounded-sm hover:bg-black transition w-full md:w-auto">Upload Product</button>
+                        <div class="mt-6 space-y-2">
+                             <label class="block text-sm font-bold text-gray-700">Short Description</label>
+                             <textarea id="p-desc" required class="w-full p-3 border border-gray-300 h-24 rounded focus:border-deep-maroon outline-none"></textarea>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">Full Details</label>
+                            <textarea id="p-details" class="w-full p-3 border border-gray-300 h-32 rounded focus:border-deep-maroon outline-none"></textarea>
+                        </div>
+                        <div class="flex gap-4 mt-6">
+                            <button type="submit" id="add-btn" class="flex-1 bg-deep-maroon text-white px-8 py-3 rounded hover:bg-black transition font-bold">Upload Product</button>
+                            <button type="button" onclick="resetProductForm()" class="px-6 py-3 border border-gray-300 rounded hover:bg-gray-100 text-gray-600">Cancel</button>
+                        </div>
                     </form>
                 </div>
-                <div id="admin-subscribers" class="admin-tab hidden"></div>
+
+                <!-- SUBSCRIBERS -->
+                <div id="admin-subscribers" class="admin-tab hidden">
+                     <h2 class="text-3xl font-bold text-gray-800 mb-6">Subscribers</h2>
+                     <div class="bg-white rounded shadow overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="p-4 font-bold text-gray-600">Email</th>
+                                    <th class="p-4 font-bold text-gray-600">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscribers-list"></tbody>
+                        </table>
+                     </div>
+                </div>
             </div>
         </div>
     </div>
@@ -680,6 +793,8 @@
         let currentCheckoutTotal = 0;
         let appliedDiscount = 0;
         let isCouponApplied = false;
+        let editingProductId = null; 
+        let allOrdersCache = []; 
         
         // --- CONFIG ---
         const GITHUB_TOKEN = "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"; 
@@ -707,7 +822,6 @@
             if (slides.length === 0) return;
             
             let currentSlide = 0;
-            // Loop time: 5 seconds per slide (animation duration is set to 7s in CSS for smooth overlap)
             setInterval(() => {
                 slides[currentSlide].classList.remove('active');
                 currentSlide = (currentSlide + 1) % slides.length;
@@ -1304,92 +1418,561 @@
             const pass = prompt("Enter Royal Passcode:");
             if (pass === '1234') {
                 document.getElementById('admin-modal').classList.remove('hidden');
-                showAdminTab('orders'); 
+                showAdminTab('dashboard'); 
             }
         }
         function closeAdminPanel() { document.getElementById('admin-modal').classList.add('hidden'); }
+        
         function showAdminTab(tab) {
             document.querySelectorAll('.admin-tab').forEach(el => el.classList.add('hidden'));
             document.getElementById('admin-' + tab).classList.remove('hidden');
             if(tab === 'orders') loadAdminOrders();
             if(tab === 'products') loadAdminProducts();
             if(tab === 'subscribers') loadAdminSubscribers();
+            if(tab === 'dashboard') loadAdminDashboard();
         }
         
-        async function adminAddProduct(e) {
+        function resetProductForm() {
+            document.getElementById('product-form').reset();
+            document.getElementById('form-title').innerText = "Add New Luxury Item";
+            document.getElementById('add-btn').innerText = "Upload Product";
+            editingProductId = null;
+            document.getElementById('current-image-url').value = "";
+            showAdminTab('products');
+        }
+
+        // --- DASHBOARD METRICS & EXPORT ---
+        async function loadAdminDashboard() {
+            const orderQ = window.query(window.collection(window.db, 'orders'));
+            const productQ = window.query(window.collection(window.db, 'products'));
+            
+            const ordersSnap = await window.getDocs(orderQ);
+            const productsSnap = await window.getDocs(productQ);
+            
+            let totalRevenue = 0;
+            allOrdersCache = []; // Reset cache for export
+            
+            ordersSnap.forEach(doc => { 
+                const data = doc.data();
+                totalRevenue += (data.amount || 0); 
+                allOrdersCache.push({ ...data, id: doc.id });
+            });
+            
+            document.getElementById('dash-revenue').innerText = '₹' + totalRevenue.toLocaleString('en-IN');
+            document.getElementById('dash-orders').innerText = ordersSnap.size;
+            document.getElementById('dash-products').innerText = productsSnap.size;
+        }
+
+        // --- PDF GENERATION ---
+        window.downloadReceipt = async function(orderId) {
+            const order = allOrdersCache.find(o => o.id === orderId);
+            if(!order) return showToast("Order details missing", "error");
+
+            const { jsPDF } = window.jspdf;
+            // Create A4 document: 210mm x 297mm
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+            // --- CONFIGURATION ---
+            const MARGIN = 15;
+            const PAGE_WIDTH = 210;
+            const PAGE_HEIGHT = 297;
+            const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+            const RIGHT_EDGE = PAGE_WIDTH - MARGIN;
+            const CENTER_X = PAGE_WIDTH / 2;
+            
+            // Colors
+            const COLOR_PRIMARY = [74, 14, 19]; // Deep Maroon
+            const COLOR_TEXT = [40, 40, 40];
+            const COLOR_LIGHT_GRAY = [245, 245, 245];
+
+            // --- FONTS ---
+            // Using standard fonts mapped to look closer to the requested style 
+            // since loading custom TTF base64 strings is heavy. 
+            // Ideally, you would load Cinzel/Cormorant as base64 here.
+            // For this fix, we stick to Times (Serif) for body and Helvetica (Sans) for headers to ensure cleanliness.
+            
+            // --- HELPER: LOAD IMAGE ---
+            const loadImage = (url) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.src = url;
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                });
+            };
+
+            try {
+                // --- 1. BORDER ---
+                doc.setDrawColor(...COLOR_PRIMARY);
+                doc.setLineWidth(0.8);
+                doc.rect(5, 5, 200, 287); // Outer decorative border
+                
+                // --- 2. WATERMARK ---
+                try {
+                    const logoImg = await loadImage('logo.png');
+                    doc.setGState(new doc.GState({ opacity: 0.08 }));
+                    // Center the watermark
+                    const wmSize = 100;
+                    doc.addImage(logoImg, 'PNG', CENTER_X - (wmSize/2), 100, wmSize, wmSize * (logoImg.height / logoImg.width));
+                    doc.setGState(new doc.GState({ opacity: 1.0 }));
+                } catch(e) { console.log("Watermark skipped"); }
+
+                // --- 3. HEADER SECTION ---
+                let cursorY = MARGIN + 5;
+
+                // Company Logo (Auto-scaled)
+                try {
+                    const logoImg = await loadImage('logo.png');
+                    const logoWidth = 30;
+                    const logoHeight = logoWidth * (logoImg.height / logoImg.width);
+                    doc.addImage(logoImg, 'PNG', MARGIN, cursorY, logoWidth, logoHeight);
+                    
+                    // Company Name & Address (Centered relative to logo height or next to it)
+                    // Let's place Company Name next to Logo
+                    doc.setTextColor(...COLOR_PRIMARY);
+                    doc.setFont("times", "bold");
+                    doc.setFontSize(22);
+                    doc.text("PANJABANS", MARGIN + 35, cursorY + 8);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "bold"); // Tracking style
+                    doc.setTextColor(160, 82, 45); // Terracotta
+                    doc.text("AUTHENTIC PUNJABI SUITS", MARGIN + 35, cursorY + 13);
+                    
+                    doc.setFont("times", "normal");
+                    doc.setTextColor(...COLOR_TEXT);
+                    doc.setFontSize(9);
+                    doc.text("Patiala, Punjab, India", MARGIN + 35, cursorY + 18);
+                    doc.text("+91 8847242013 | support@panjabans.com", MARGIN + 35, cursorY + 22);
+
+                } catch(e) {
+                    // Fallback if logo fails
+                    doc.setTextColor(...COLOR_PRIMARY);
+                    doc.setFont("times", "bold");
+                    doc.setFontSize(22);
+                    doc.text("PANJABANS", MARGIN, cursorY + 8);
+                }
+
+                // Invoice Label (Right Aligned)
+                doc.setFont("times", "normal");
+                doc.setFontSize(26);
+                doc.setTextColor(...COLOR_PRIMARY);
+                doc.text("RECEIPT", RIGHT_EDGE, cursorY + 10, { align: "right" });
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`#${order.orderId}`, RIGHT_EDGE, cursorY + 18, { align: "right" });
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text(new Date(order.createdAt.seconds * 1000).toLocaleDateString(), RIGHT_EDGE, cursorY + 23, { align: "right" });
+
+                cursorY += 35;
+
+                // --- 4. DIVIDER ---
+                doc.setDrawColor(...COLOR_PRIMARY);
+                doc.setLineWidth(0.5);
+                doc.line(MARGIN, cursorY, RIGHT_EDGE, cursorY);
+                cursorY += 8;
+
+                // --- 5. CUSTOMER DETAILS (Two Columns) ---
+                const colWidth = CONTENT_WIDTH / 2;
+                
+                // Column 1: Bill To
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9);
+                doc.setTextColor(...COLOR_PRIMARY);
+                doc.text("BILL TO", MARGIN, cursorY);
+                
+                doc.setFont("times", "bold");
+                doc.setFontSize(12);
+                doc.setTextColor(0);
+                doc.text(order.customer.name, MARGIN, cursorY + 6);
+                
+                doc.setFont("times", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(60);
+                doc.text(order.customer.phone, MARGIN, cursorY + 11);
+                const addrLines = doc.splitTextToSize(order.customer.address, colWidth - 10);
+                doc.text(addrLines, MARGIN, cursorY + 16);
+
+                // Column 2: Order Info (Right Aligned Content for symmetry)
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9);
+                doc.setTextColor(...COLOR_PRIMARY);
+                doc.text("ORDER INFO", RIGHT_EDGE, cursorY, { align: "right" });
+
+                doc.setFont("times", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(0);
+                
+                // Helper for right-aligned key-value pairs
+                const printRightKV = (key, val, y) => {
+                    doc.setFont("helvetica", "bold");
+                    doc.text(key, RIGHT_EDGE - 40, y, { align: "right" }); // Key column
+                    doc.setFont("times", "normal");
+                    doc.text(val, RIGHT_EDGE, y, { align: "right" }); // Value column
+                };
+
+                printRightKV("Payment:", order.method.toUpperCase(), cursorY + 6);
+                printRightKV("Status:", order.status, cursorY + 11);
+                
+                // Adjust cursor based on address height
+                cursorY = Math.max(cursorY + 16 + (addrLines.length * 4), cursorY + 25);
+                cursorY += 5;
+
+                // --- 6. TABLE ---
+                const tableData = order.items.map(item => [
+                    item.name,
+                    item.quantity,
+                    `Rs. ${item.price.toLocaleString('en-IN')}`,
+                    `Rs. ${(item.price * item.quantity).toLocaleString('en-IN')}`
+                ]);
+
+                doc.autoTable({
+                    startY: cursorY,
+                    margin: { left: MARGIN, right: MARGIN },
+                    head: [['ITEM DESCRIPTION', 'QTY', 'PRICE', 'TOTAL']],
+                    body: tableData,
+                    theme: 'plain',
+                    headStyles: {
+                        fillColor: COLOR_PRIMARY,
+                        textColor: 255,
+                        font: 'helvetica',
+                        fontStyle: 'bold',
+                        fontSize: 9,
+                        halign: 'right' // Default to right for numbers
+                    },
+                    columnStyles: {
+                        0: { halign: 'left', cellWidth: 'auto' }, // Item Name Left
+                        1: { halign: 'center', cellWidth: 20 },
+                        2: { halign: 'right', cellWidth: 30 },
+                        3: { halign: 'right', cellWidth: 30 }
+                    },
+                    // Override header alignment for first column
+                    didParseCell: function(data) {
+                        if (data.section === 'head' && data.column.index === 0) {
+                            data.cell.styles.halign = 'left';
+                        }
+                    },
+                    styles: {
+                        font: 'times',
+                        fontSize: 10,
+                        cellPadding: 3,
+                        lineColor: [230, 230, 230],
+                        lineWidth: 0.1
+                    }
+                });
+
+                cursorY = doc.lastAutoTable.finalY + 2;
+
+                // --- 7. SUMMARY SECTION (Right Aligned Box) ---
+                // We draw a background box for the total
+                const summaryWidth = 80;
+                const summaryX = RIGHT_EDGE - summaryWidth;
+                
+                doc.setFillColor(250, 250, 250);
+                doc.rect(summaryX - 5, cursorY, summaryWidth + 5, 35, 'F'); // Light gray background
+
+                const subtotal = order.items.reduce((s,i) => s + (i.price * i.quantity), 0);
+                const discount = order.discount || 0;
+                const total = order.amount;
+
+                let summaryY = cursorY + 8;
+                
+                // Subtotal
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(80);
+                doc.text("Subtotal", summaryX, summaryY);
+                doc.setTextColor(0);
+                doc.text(`Rs. ${subtotal.toLocaleString('en-IN')}`, RIGHT_EDGE, summaryY, { align: "right" });
+                
+                // Discount
+                if(discount > 0) {
+                    summaryY += 6;
+                    doc.setTextColor(80);
+                    doc.text("Discount", summaryX, summaryY);
+                    doc.setTextColor(220, 20, 60); // Red
+                    doc.text(`- Rs. ${discount.toLocaleString('en-IN')}`, RIGHT_EDGE, summaryY, { align: "right" });
+                }
+
+                // Grand Total Line
+                summaryY += 4;
+                doc.setDrawColor(200);
+                doc.line(summaryX, summaryY, RIGHT_EDGE, summaryY);
+                
+                summaryY += 8;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.setTextColor(0);
+                doc.text("Grand Total", summaryX, summaryY);
+                
+                doc.text(`Rs. ${total.toLocaleString('en-IN')}`, RIGHT_EDGE - 2, summaryY, { align: "right" });
+
+                // --- 8. THANK YOU NOTE & SIGNATURE ---
+                const footerY = 250;
+                
+                doc.setFont("times", "italic");
+                doc.setFontSize(14);
+                doc.setTextColor(...COLOR_PRIMARY);
+                doc.text("Sat Sri Akal!", CENTER_X, footerY, { align: "center" });
+                
+                doc.setFont("times", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(80);
+                doc.text("Thank you for shopping with Panjabans. We weave tradition into every thread.", CENTER_X, footerY + 6, { align: "center" });
+
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text("Computer Generated Receipt • Valid without signature", CENTER_X, footerY + 15, { align: "center" });
+                
+                // Bottom Bar
+                doc.setFillColor(...COLOR_PRIMARY);
+                doc.rect(5, 285, 200, 2, 'F');
+
+                doc.save(`Receipt_${order.orderId}.pdf`);
+
+            } catch(e) {
+                console.error("Receipt Generation Error:", e);
+                showToast("Error generating receipt", "error");
+            }
+        }
+
+        window.downloadAllOrders = function() {
+            if(allOrdersCache.length === 0) return showToast("No orders to export", "error");
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.text("Sales Report - All Orders", 14, 20);
+            
+            const tableData = allOrdersCache.map(o => [
+                o.orderId,
+                new Date(o.createdAt.seconds * 1000).toLocaleDateString(),
+                o.customer.name,
+                `Rs. ${o.amount}`,
+                o.status
+            ]);
+
+            doc.autoTable({
+                startY: 30,
+                head: [['Order ID', 'Date', 'Customer', 'Amount', 'Status']],
+                body: tableData,
+            });
+
+            doc.save('Panjabans_Sales_Report.pdf');
+        }
+
+        // --- PRODUCT MANAGEMENT ---
+        async function adminUpdateProduct(e) {
             e.preventDefault();
-            const f = e.target;
             const btn = document.getElementById('add-btn');
             const file = document.getElementById('image-file').files[0];
-            if (!file) return showToast("Select an image", "error");
+            const name = document.getElementById('p-name').value;
+            const price = Number(document.getElementById('p-price').value);
+            const category = document.getElementById('p-category').value;
+            const fabric = document.getElementById('p-fabric').value;
+            const origin = document.getElementById('p-origin').value;
+            const desc = document.getElementById('p-desc').value;
+            const details = document.getElementById('p-details').value;
+            const currentImg = document.getElementById('current-image-url').value;
 
-            btn.disabled = true; btn.innerHTML = 'Uploading...';
+            if (!file && !currentImg) return showToast("Select an image", "error");
+
+            btn.disabled = true; btn.innerHTML = 'Processing...';
             
             try {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = async event => {
-                    const content = event.target.result.split(',')[1];
-                    const filename = `product-images/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-                    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${filename}`, {
-                        method: 'PUT',
-                        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: `Add image`, content: content })
+                let imageUrl = currentImg;
+
+                if (file) {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    await new Promise(resolve => {
+                        reader.onload = async event => {
+                            const content = event.target.result.split(',')[1];
+                            const filename = `product-images/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+                            const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${filename}`, {
+                                method: 'PUT',
+                                headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message: `Add image`, content: content })
+                            });
+                            if(!res.ok) throw new Error("Image Upload Failed");
+                            imageUrl = `https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/main/${filename}`;
+                            resolve();
+                        }
                     });
-                    if(!res.ok) throw new Error("Image Upload Failed");
-                    const imageUrl = `https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/main/${filename}`;
-                    
-                    await window.addDoc(window.collection(window.db, 'products'), {
-                        name: f.name.value, price: Number(f.price.value), category: f.category.value,
-                        image: imageUrl, fabric: f.fabric.value, origin: f.origin.value,
-                        desc: f.desc.value, details: f.details.value, createdAt: window.serverTimestamp()
-                    });
-                    showToast("Product Added");
-                    f.reset();
-                    btn.disabled = false; btn.innerHTML = 'Upload Product';
-                    showAdminTab('products');
                 }
-            } catch(err) { showToast(err.message, 'error'); btn.disabled = false; }
+                
+                const productData = {
+                    name, price, category, image: imageUrl, fabric, origin, desc, details, 
+                    updatedAt: window.serverTimestamp()
+                };
+
+                if (editingProductId) {
+                    await window.updateDoc(window.doc(window.db, 'products', editingProductId), productData);
+                    showToast("Product Updated Successfully");
+                } else {
+                    productData.createdAt = window.serverTimestamp();
+                    await window.addDoc(window.collection(window.db, 'products'), productData);
+                    showToast("Product Added Successfully");
+                }
+                
+                resetProductForm();
+                btn.disabled = false;
+            } catch(err) { 
+                showToast(err.message, "error"); 
+                btn.disabled = false; 
+                btn.innerHTML = editingProductId ? "Update Product" : "Upload Product";
+            }
         }
 
-        async function loadAdminOrders() {
-            const list = document.getElementById('admin-orders');
-            const q = window.query(window.collection(window.db, 'orders'), window.orderBy('createdAt', 'desc'));
-            window.onSnapshot(q, (snap) => {
-                list.innerHTML = '<h3 class="text-xl font-bold mb-4">Orders</h3>' + snap.docs.map(doc => {
-                    const o = doc.data();
-                    return `<div class="bg-white p-4 mb-2 shadow flex justify-between">
-                        <div><p class="font-bold">${o.orderId} - ${o.customer.name}</p><p class="text-sm">₹${o.amount} (${o.method})</p></div>
-                        <span class="text-xs bg-gray-200 px-2 py-1 h-fit rounded">${o.status}</span>
-                    </div>`
-                }).join('');
-            });
-        }
-        
         async function loadAdminProducts() {
-            const list = document.getElementById('admin-products');
+            const list = document.getElementById('admin-products-list');
             const q = window.query(window.collection(window.db, 'products'), window.orderBy('createdAt', 'desc'));
             window.onSnapshot(q, (snap) => {
-                 list.innerHTML = '<h3 class="text-xl font-bold mb-4">Inventory</h3>' + snap.docs.map(doc => {
+                 list.innerHTML = snap.docs.map(doc => {
                     const p = doc.data();
-                    return `<div class="bg-white p-2 mb-2 shadow flex items-center gap-2">
-                        <img src="${p.image}" class="w-10 h-10 object-cover">
-                        <p class="font-bold flex-1">${p.name}</p>
-                        <button onclick="deleteProduct('${doc.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>
-                    </div>`
+                    return `
+                    <div class="bg-white p-4 shadow rounded flex items-center gap-4">
+                        <img src="${p.image}" class="w-16 h-16 object-cover rounded border">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-deep-maroon truncate">${p.name}</h4>
+                            <p class="text-sm text-gray-500">₹${p.price}</p>
+                        </div>
+                        <div class="flex gap-2">
+                             <button onclick="editProduct('${doc.id}')" class="text-blue-600 hover:text-blue-800 p-2"><i class="fa-solid fa-edit"></i></button>
+                             <button onclick="deleteProduct('${doc.id}')" class="text-red-500 hover:text-red-700 p-2"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
                 }).join('');
             });
         }
         
+        window.editProduct = async function(id) {
+            try {
+                const docSnap = await window.getDoc(window.doc(window.db, "products", id));
+                if (docSnap.exists()) {
+                    const p = docSnap.data();
+                    editingProductId = id;
+                    
+                    document.getElementById('p-name').value = p.name;
+                    document.getElementById('p-price').value = p.price;
+                    document.getElementById('p-category').value = p.category;
+                    document.getElementById('p-fabric').value = p.fabric || '';
+                    document.getElementById('p-origin').value = p.origin || '';
+                    document.getElementById('p-desc').value = p.desc;
+                    document.getElementById('p-details').value = p.details || '';
+                    document.getElementById('current-image-url').value = p.image;
+                    
+                    document.getElementById('form-title').innerText = "Edit Luxury Item";
+                    document.getElementById('add-btn').innerText = "Update Product";
+                    
+                    showAdminTab('add-product');
+                }
+            } catch(e) { showToast("Error loading product", "error"); }
+        }
+
         async function deleteProduct(id) {
-            if(confirm("Delete?")) await window.deleteDoc(window.doc(window.db, "products", id));
+            if(confirm("Are you sure you want to delete this treasure?")) await window.deleteDoc(window.doc(window.db, "products", id));
+        }
+
+        // --- ORDER MANAGEMENT ---
+        async function loadAdminOrders() {
+            const list = document.getElementById('admin-orders-list');
+            const q = window.query(window.collection(window.db, 'orders'), window.orderBy('createdAt', 'desc'));
+            window.onSnapshot(q, (snap) => {
+                // Update cache for exports
+                allOrdersCache = snap.docs.map(doc => ({...doc.data(), id: doc.id}));
+                
+                list.innerHTML = snap.docs.map(doc => {
+                    const o = doc.data();
+                    const date = o.createdAt ? new Date(o.createdAt.seconds*1000).toLocaleDateString() : 'N/A';
+                    
+                    const options = ['Pre-Order Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
+                        .map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${s}</option>`)
+                        .join('');
+
+                    return `
+                    <div class="bg-white p-6 rounded shadow border-l-4 ${o.status === 'Delivered' ? 'border-green-500' : 'border-yellow-500'}">
+                        <div class="flex flex-col md:flex-row justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg text-deep-maroon">${o.orderId}</h3>
+                                <p class="text-sm text-gray-500">${date} • ${o.customer.name}</p>
+                            </div>
+                            <div class="mt-2 md:mt-0 flex flex-col md:flex-row gap-2">
+                                <select onchange="updateOrderStatus('${doc.id}', this.value)" class="p-2 border rounded bg-gray-50 text-sm font-bold cursor-pointer">
+                                    ${options}
+                                </select>
+                                <div class="flex gap-2">
+                                    <button onclick="downloadReceipt('${doc.id}')" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 flex items-center gap-1">
+                                        <i class="fa-solid fa-download"></i> Receipt
+                                    </button>
+                                    <button onclick="deleteOrder('${doc.id}')" class="text-red-400 hover:text-red-600 px-2"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded text-sm mb-4">
+                            <p><strong>Items:</strong> ${o.items.map(i => `${i.name} (x${i.quantity})`).join(', ')}</p>
+                            <p><strong>Total:</strong> ₹${o.amount} (${o.method})</p>
+                        </div>
+                        
+                        <details class="text-xs text-gray-500 cursor-pointer">
+                            <summary>View Shipping Details</summary>
+                            <div class="mt-2 p-2 border-t">
+                                <p><strong>Phone:</strong> ${o.customer.phone}</p>
+                                <p><strong>Address:</strong> ${o.customer.address}</p>
+                            </div>
+                        </details>
+                    </div>`
+                }).join('');
+            });
+        }
+
+        window.updateOrderStatus = async function(id, status) {
+            try {
+                await window.updateDoc(window.doc(window.db, 'orders', id), { status: status });
+                showToast(`Order status updated to ${status}`);
+            } catch(e) { showToast("Failed to update status", "error"); }
+        }
+
+        window.deleteOrder = async function(id) {
+            if(confirm("Delete this order record permanently?")) {
+                await window.deleteDoc(window.doc(window.db, 'orders', id));
+                showToast("Order deleted");
+            }
+        }
+
+        window.deleteAllOrders = async function() {
+            if(confirm("⚠️ WARNING: This will delete ALL order history permanently. Are you sure?") && confirm("Double check: Really delete everything?")) {
+                try {
+                    const q = window.query(window.collection(window.db, 'orders'));
+                    const snap = await window.getDocs(q);
+                    const batch = window.writeBatch(window.db);
+                    snap.docs.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    showToast("All orders have been wiped.", "success");
+                } catch(e) {
+                    showToast("Error deleting orders: " + e.message, "error");
+                }
+            }
         }
         
         async function loadAdminSubscribers() {
-             const list = document.getElementById('admin-subscribers');
+             const list = document.getElementById('subscribers-list');
              const q = window.query(window.collection(window.db, 'subscribers'), window.orderBy('createdAt', 'desc'));
              const snap = await window.getDocs(q);
-             list.innerHTML = '<h3 class="text-xl font-bold mb-4">Subscribers</h3>' + snap.docs.map(d => `<div class="bg-white p-2 mb-1">${d.data().email}</div>`).join('');
+             list.innerHTML = snap.docs.map(d => {
+                 const data = d.data();
+                 const date = data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleDateString() : '';
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4">${data.email}</td><td class="p-4 text-gray-500 text-sm">${date}</td></tr>`;
+             }).join('');
         }
 
     </script>
