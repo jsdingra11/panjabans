@@ -119,6 +119,24 @@
             background-blend-mode: multiply;
         }
 
+        /* --- SLIDESHOW STYLES --- */
+        .slide {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1);
+            transition: opacity 2s ease-in-out, transform 7s linear;
+            z-index: 0;
+        }
+        
+        .slide.active {
+            opacity: 1;
+            transform: scale(1.15); 
+            z-index: 1;
+        }
+
         /* 3. Polaroid/Old Photo Card Style */
         .photo-card {
             background-color: #fff;
@@ -233,7 +251,8 @@
 
     <nav class="bg-mud-light/95 backdrop-blur-md sticky top-0 z-40 shadow-sm border-b border-mud-base/30 transition-all duration-300" id="navbar">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <button class="md:hidden text-deep-maroon text-xl"><i class="fa-solid fa-bars"></i></button>
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-deep-maroon text-xl hover:text-antique-gold transition"><i class="fa-solid fa-bars"></i></button>
 
             <div class="flex items-center gap-3 mx-auto md:mx-0 cursor-pointer group" onclick="window.scrollTo(0,0)">
                 <img src="logo.png" alt="Panjabans Logo" class="h-12 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300">
@@ -264,13 +283,41 @@
         </div>
     </nav>
 
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 z-50 bg-mud-light transform -translate-x-full transition-transform duration-300 flex flex-col pt-20 px-8 md:hidden border-r-4 border-deep-maroon">
+        <button onclick="toggleMobileMenu()" class="absolute top-6 right-6 text-deep-maroon text-2xl hover:rotate-90 transition"><i class="fa-solid fa-times"></i></button>
+        <div class="flex flex-col space-y-6">
+            <a href="#products" onclick="toggleMobileMenu()" class="text-2xl font-heading text-deep-maroon font-bold border-b border-mud-base pb-2">Collection</a>
+            <a href="#about" onclick="toggleMobileMenu()" class="text-2xl font-heading text-deep-maroon font-bold border-b border-mud-base pb-2">Our Story</a>
+            <button onclick="toggleWishlist(); toggleMobileMenu()" class="text-left text-2xl font-heading text-deep-maroon font-bold border-b border-mud-base pb-2">Wishlist</button>
+            <button onclick="toggleCart(); toggleMobileMenu()" class="text-left text-2xl font-heading text-deep-maroon font-bold border-b border-mud-base pb-2">My Potli</button>
+            <button onclick="openTrackOrder(); toggleMobileMenu()" class="text-left text-2xl font-heading text-deep-maroon font-bold border-b border-mud-base pb-2">Track Order</button>
+        </div>
+        <div class="mt-auto mb-10 text-center">
+            <p class="text-xs text-gray-500 font-serif italic mb-2">Authentic Patiala Heritage</p>
+            <div class="flex justify-center gap-6 text-deep-maroon text-2xl">
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#"><i class="fa-brands fa-whatsapp"></i></a>
+            </div>
+        </div>
+    </div>
+
     <header class="relative h-[85vh] overflow-hidden flex items-center justify-center border-b-8 border-double border-deep-maroon">
         
-        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover z-0">
-            <source src="panjab.mp4" type="video/mp4">
-            <img src="slides/bg2.png" alt="Video Fallback" class="w-full h-full object-cover">
-            Your browser does not support the video tag.
-        </video>
+        <!-- MOBILE VIDEO -->
+        <div class="absolute inset-0 w-full h-full md:hidden z-0">
+            <video autoplay loop muted playsinline class="w-full h-full object-cover">
+                <source src="panjab.mp4" type="video/mp4">
+                <img src="slides/bg2.png" alt="Video Fallback" class="w-full h-full object-cover">
+            </video>
+        </div>
+
+        <!-- DESKTOP SLIDESHOW -->
+        <div id="desktop-slideshow" class="absolute inset-0 w-full h-full hidden md:block z-0">
+            <div class="slide active bg-center" style="background-image: url('https://images.unsplash.com/photo-1621815152865-c40d68c92f96?q=80&w=2070&auto=format&fit=crop');"></div>
+            <div class="slide bg-center" style="background-image: url('https://images.unsplash.com/photo-1548651817-f58c42a27571?q=80&w=2070&auto=format&fit=crop');"></div>
+            <div class="slide bg-center" style="background-image: url('https://images.unsplash.com/photo-1596205807186-b4528a49c4f7?q=80&w=2070&auto=format&fit=crop');"></div>
+        </div>
 
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 z-10 pointer-events-none"></div>
         
@@ -371,8 +418,11 @@
                     <p class="py-1">support@panjabans.com</p>
                 </div>
                 <div>
-                    <h5 class="font-bold mb-4 uppercase text-mustard">Access</h5>
-                    <button onclick="openAdminLogin()" class="hover:text-antique-gold underline py-1">Staff Login</button>
+                    <h5 class="font-bold mb-4 uppercase text-mustard">Policies</h5>
+                    <button onclick="openPolicy('shipping')" class="block w-full hover:text-antique-gold py-1">Shipping Policy</button>
+                    <button onclick="openPolicy('privacy')" class="block w-full hover:text-antique-gold py-1">Privacy Policy</button>
+                    <button onclick="openPolicy('terms')" class="block w-full hover:text-antique-gold py-1">Terms & Conditions</button>
+                    <button onclick="openAdminLogin()" class="block w-full hover:text-antique-gold py-1 mt-4 text-white/50">Staff Login</button>
                 </div>
             </div>
 
@@ -384,6 +434,7 @@
         <i class="fa-brands fa-whatsapp text-3xl"></i>
     </a>
 
+    <!-- SIDEBARS -->
     <div id="cart-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity" onclick="toggleCart()"></div>
     <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-mud-light shadow-2xl z-[60] transform translate-x-full transition-transform duration-500 flex flex-col border-l-4 border-deep-maroon">
         <div class="p-6 bg-deep-maroon text-mud-light flex justify-between items-center relative overflow-hidden">
@@ -419,16 +470,17 @@
             </div>
     </div>
 
+    <!-- MODALS -->
+    
+    <!-- Product Modal -->
     <div id="product-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md">
         <div class="bg-mud-light w-full max-w-6xl h-auto md:h-[90vh] rounded-sm shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-[scaleIn_0.3s_ease-out] border-4 border-deep-maroon">
-            
             <button onclick="closeProductModal()" class="absolute top-4 right-6 text-deep-maroon bg-white/80 rounded-full w-10 h-10 z-50 hover:bg-deep-maroon hover:text-white transition flex items-center justify-center shadow-lg"><i class="fa-solid fa-times text-xl"></i></button>
-            
-            <div id="modal-content" class="flex flex-col md:flex-row w-full h-full">
-                </div>
+            <div id="modal-content" class="flex flex-col md:flex-row w-full h-full"></div>
         </div>
     </div>
 
+    <!-- Size Guide Modal -->
     <div id="size-guide-modal" class="fixed inset-0 z-[80] hidden flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
         <div class="bg-white p-8 max-w-2xl w-full border-4 border-double border-deep-maroon relative">
             <button onclick="document.getElementById('size-guide-modal').classList.add('hidden')" class="absolute top-2 right-4 text-3xl">&times;</button>
@@ -451,6 +503,18 @@
         </div>
     </div>
 
+    <!-- Policy Modal -->
+    <div id="policy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-mud-light w-full max-w-2xl max-h-[85vh] overflow-y-auto border-4 border-deep-maroon p-8 relative shadow-2xl">
+            <button onclick="document.getElementById('policy-modal').classList.add('hidden')" class="absolute top-4 right-4 text-deep-maroon text-2xl hover:rotate-90 transition"><i class="fa-solid fa-times"></i></button>
+            <h2 id="policy-title" class="font-heading text-3xl text-deep-maroon mb-6 border-b border-mud-base pb-2">Policy</h2>
+            <div id="policy-content" class="text-gray-700 font-body leading-relaxed space-y-4">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
     <div id="email-modal" class="fixed inset-0 z-[90] hidden flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
         <div class="bg-mud-light w-full max-w-md p-8 shadow-2xl relative border-2 border-antique-gold text-center">
             <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-deep-maroon text-white w-12 h-12 rounded-full flex items-center justify-center border-4 border-mud-light">
@@ -473,6 +537,7 @@
         </div>
     </div>
 
+    <!-- Checkout Modal -->
     <div id="checkout-modal" class="fixed inset-0 z-[80] hidden flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
         <div class="bg-mud-light w-full max-w-lg p-0 rounded-sm shadow-2xl relative max-h-[90vh] overflow-y-auto flex flex-col">
             <div class="bg-deep-maroon text-white p-4 flex justify-between items-center sticky top-0 z-10">
@@ -529,6 +594,7 @@
         </div>
     </div>
 
+    <!-- Admin Modal -->
     <div id="admin-modal" class="fixed inset-0 z-[100] hidden flex bg-black/90">
         <div class="w-64 bg-deep-maroon text-mud-light p-6 hidden md:flex flex-col">
             <h2 class="font-heading text-2xl mb-8 text-antique-gold">Admin Panel</h2>
@@ -569,6 +635,7 @@
         </div>
     </div>
 
+    <!-- Success Modal -->
     <div id="success-modal" class="fixed inset-0 z-[90] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
         <div class="bg-white p-8 text-center border-4 border-deep-maroon max-w-sm mx-4 shadow-2xl relative">
             <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 text-4xl shadow-inner"><i class="fa-solid fa-check"></i></div>
@@ -585,6 +652,7 @@
     <div id="toast-container"></div>
     <div id="receipt-container" class="hidden"></div>
     
+    <!-- Track Order Modal -->
     <div id="track-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm px-4">
         <div class="bg-mud-light w-full max-w-md p-6 rounded-sm shadow-2xl relative border-4 border-double border-deep-maroon">
             <button onclick="document.getElementById('track-modal').classList.add('hidden')" class="absolute top-2 right-4 text-deep-maroon text-2xl">&times;</button>
@@ -622,7 +690,7 @@
         document.addEventListener('DOMContentLoaded', () => { 
             setupScrollReveal(); 
             setupNavbarScroll();
-            // startHeroSlideshow() removed for video
+            startDesktopSlideshow(); 
             
             // Email popup trigger
             setTimeout(() => {
@@ -633,9 +701,76 @@
             }, 5000);
         });
 
+        // --- SLIDESHOW ---
+        function startDesktopSlideshow() {
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length === 0) return;
+            
+            let currentSlide = 0;
+            // Loop time: 5 seconds per slide (animation duration is set to 7s in CSS for smooth overlap)
+            setInterval(() => {
+                slides[currentSlide].classList.remove('active');
+                currentSlide = (currentSlide + 1) % slides.length;
+                slides[currentSlide].classList.add('active');
+            }, 5000); 
+        }
+
         async function initApp() { 
             loadInitialProducts(); 
             loadWishlist(); 
+        }
+
+        // --- UI TOGGLES ---
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('-translate-x-full')) {
+                menu.classList.remove('-translate-x-full');
+            } else {
+                menu.classList.add('-translate-x-full');
+            }
+        }
+
+        // --- POLICY MODAL LOGIC ---
+        const policies = {
+            shipping: {
+                title: "Shipping Policy",
+                content: `
+                    <p><strong>Processing Time:</strong> As our products are authentic and often handcrafted in Patiala, please allow 10-15 business days for your order to be processed and dispatched. Custom orders may take longer.</p>
+                    <p><strong>Domestic Shipping:</strong> We offer free shipping across India for all prepaid orders. Delivery typically takes 3-7 days after dispatch.</p>
+                    <p><strong>International Shipping:</strong> We ship globally using premium carriers (DHL/FedEx). Shipping charges are calculated at checkout based on weight and destination.</p>
+                    <p><strong>Delays:</strong> Panjabans is not responsible for delays caused by courier services or unforeseen weather conditions.</p>
+                `
+            },
+            privacy: {
+                title: "Privacy Policy",
+                content: `
+                    <p><strong>Information Collection:</strong> We collect personal information (name, email, address, phone number) solely for the purpose of processing your order and improving your shopping experience.</p>
+                    <p><strong>Data Usage:</strong> We do not sell, trade, or rent your personal identification information to others. Your data is secure with us.</p>
+                    <p><strong>Cookies:</strong> Our website uses cookies to enhance user experience, such as remembering items in your cart.</p>
+                    <p><strong>Payments:</strong> All online payments are processed through secure gateways (Razorpay). We do not store your credit/debit card details.</p>
+                `
+            },
+            terms: {
+                title: "Terms & Conditions",
+                content: `
+                    <p><strong>General:</strong> By accessing and using this website, you agree to comply with our terms and conditions.</p>
+                    <p><strong>Product Accuracy:</strong> We have made every effort to display the colors and details of our products accurately. However, due to screen differences, actual colors may vary slightly.</p>
+                    <p><strong>Handcrafted Nature:</strong> Minor irregularities in embroidery or weaving are characteristic of handcrafted products and are not considered defects.</p>
+                    <p><strong>Returns & Exchange:</strong> We accept returns only for defective items reported within 48 hours of delivery. Custom-stitched suits are not eligible for return.</p>
+                `
+            }
+        };
+
+        function openPolicy(type) {
+            const modal = document.getElementById('policy-modal');
+            const title = document.getElementById('policy-title');
+            const content = document.getElementById('policy-content');
+            
+            if(policies[type]) {
+                title.innerText = policies[type].title;
+                content.innerHTML = policies[type].content;
+                modal.classList.remove('hidden');
+            }
         }
 
         // --- NAVBAR SCROLL EFFECT ---
